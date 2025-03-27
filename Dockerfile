@@ -11,11 +11,11 @@ ENV LANG="C.UTF-8"
 ENV FILEBOT_OPTS="-Dapplication.deployment=docker -Dnet.filebot.archive.extractor=ShellExecutables -Duser.home=$HOME"
 
 # 安装基础依赖
-RUN apk add --no-cache \
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+    && apk add --no-cache \
     mediainfo \
     chromaprint \
     p7zip \
-    unrar \
     curl \
     unzip \
     bash \
@@ -40,15 +40,8 @@ RUN set -eux; \
     rm -rf /tmp/projector-server.zip /opt/projector-server/bin; \
     find /opt/projector-server/lib -name "slf4j-*" -delete
 
-# 下载并配置projector启动脚本
-RUN mkdir -p /opt/bin /opt/filebot-projector \
-    && curl -fsSL -o /opt/bin/run-as-user \
-    https://raw.githubusercontent.com/filebot/filebot-docker/master/projector/run-as-user \
-    && curl -fsSL -o /opt/bin/run \
-    https://raw.githubusercontent.com/filebot/filebot-docker/master/projector/run \
-    && curl -fsSL -o /opt/filebot-projector/start \
-    https://raw.githubusercontent.com/filebot/filebot-docker/master/projector/start \
-    && chmod +x /opt/bin/run-as-user /opt/bin/run /opt/filebot-projector/start
+# install custom launcher scripts
+COPY projector /
 
 # 修改FileBot启动参数
 RUN sed -i \
