@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-alpine
+FROM eclipse-temurin:17-jre-alpine
 
 LABEL maintainer="Reinhard Pointner <rednoah@filebot.net>"
 
@@ -52,7 +52,7 @@ RUN mkdir -p /opt/bin /opt/filebot-projector \
 
 # 修改FileBot启动参数
 RUN sed -i \
-    -e 's|exec "$JAVA" |exec "$JAVA" -Dorg.jetbrains.projector.server.enable=true \\\n  -Dorg.jetbrains.projector.server.classToLaunch=net.filebot.Main \\\n  -cp "/opt/projector-server/lib/*:$FILEBOT_HOME/jar/*" \\\n  org.jetbrains.projector.server.ProjectorLauncher \\\n  |' \
+    -e 's|exec "$JAVA" |exec "$JAVA" -Dorg.jetbrains.projector.server.enable=true -Dorg.jetbrains.projector.server.classToLaunch=net.filebot.Main -cp "/opt/projector-server/lib/*:$FILEBOT_HOME/jar/*" org.jetbrains.projector.server.ProjectorLauncher |' \
     -e 's|-XX:SharedArchiveFile=/usr/share/filebot/jsa/classes.jsa||' \
     -e 's|-XX:+DisableAttachMechanism|-XX:+EnableDynamicAgentLoading -Djdk.attach.allowAttachSelf=true|' \
     "$FILEBOT_HOME/filebot.sh"
