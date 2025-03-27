@@ -1,60 +1,63 @@
-FROM eclipse-temurin:17-jre-alpine
+# 第一阶段：构建基础环境
+FROM alpine:3.19 AS base
 
 LABEL maintainer="Reinhard Pointner <rednoah@filebot.net>"
 
-ENV FILEBOT_VERSION="5.1.7"
-ENV FILEBOT_URL="https://get.filebot.net/filebot/FileBot_$FILEBOT_VERSION/FileBot_$FILEBOT_VERSION-portable.tar.xz"
-ENV FILEBOT_SHA256="1a98d6a36f80b13d210f708927c3dffcae536d6b46d19136b48a47fd41064f0b"
-ENV FILEBOT_HOME="/opt/filebot"
-ENV HOME="/data"
-ENV LANG="C.UTF-8"
-ENV FILEBOT_OPTS="-Dapplication.deployment=docker -Dnet.filebot.archive.extractor=ShellExecutables -Duser.home=$HOME"
+ENV FILEBOT_VERSION="5.1.7" \
+    HOME="/data" \
+    LANG="C.UTF-8" \
+    PUID="1000" \
+    PGID="1000" \
+    PUSER="filebot" \
+    PGROUP="filebot"
 
-# 安装基础依赖
-RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
-    && apk add --no-cache \
+# 安装主要依赖
+RUN apk add --no-cache \
+    openjdk21-jre-headless \
+    jna \
     mediainfo \
     chromaprint \
+    unrar \
     p7zip \
+    xz \
+    ffmpeg \
+    mkvtoolnix \
+    atomicparsley \
+    imagemagick \
+    libwebp-tools \
+    sudo \
+    gnupg \
     curl \
-    unzip \
-    bash \
-    shadow
+    file \
+    inotify-tools \
+    rsync \
+    jdupes \
+    bash
 
 # 安装FileBot
 RUN set -eux; \
-    wget -O /tmp/filebot.tar.xz "$FILEBOT_URL"; \
-    echo "$FILEBOT_SHA256  /tmp/filebot.tar.xz" | sha256sum -c -; \
-    mkdir -p "$FILEBOT_HOME"; \
-    tar -xf /tmp/filebot.tar.xz -C "$FILEBOT_HOME"; \
-    rm /tmp/filebot.tar.xz; \
-    find "$FILEBOT_HOME/lib" -type f ! -name 'libjnidispatch.so' -delete; \
-    ln -s /data "$FILEBOT_HOME/data"
+    curl -fsSL "https://raw.githubusercontent.com/filebot/plugins/master/gpg/maintainer.pub" | gpg --dearmor --output "/usr/share/keyrings/filebot.gpg"; \
+    echo "https://get.filebot.net/alpine/" | tee -a /etc/apk/repositories; \
+    apk add --no-cache filebot; \
+    sed -i 's|APP_DATA=.*|APP_DATA="$HOME"|g; s|-Dapplication.deployment=deb|-Dapplication.deployment=docker -Duser.home="$HOME"|g' /usr/bin/filebot
 
-# 安装Projector Server
+COPY generic /
+
+# 第二阶段：添加Projector支持
+FROM base AS projector
+
+# 安装OpenJDK 17用于Projector
+RUN apk add --no-cache openjdk17-jre-headless
+
+# 安装Projector
 RUN set -eux; \
-    curl -fsSL -o /tmp/projector-server.zip \
-    https://github.com/JetBrains/projector-server/releases/download/v1.8.1/projector-server-v1.8.1.zip; \
+    curl -fsSL -o /tmp/projector-server.zip https://github.com/JetBrains/projector-server/releases/download/v1.8.1/projector-server-v1.8.1.zip; \
     unzip /tmp/projector-server.zip -d /opt; \
-    mv /opt/projector-server-* /opt/projector-server; \
-    rm -rf /tmp/projector-server.zip /opt/projector-server/bin; \
-    find /opt/projector-server/lib -name "slf4j-*" -delete
+    mv -v /opt/projector-server-* /opt/projector-server; \
+    rm -rf /opt/projector-server/lib/slf4j-* /opt/projector-server/bin /tmp/projector-server.zip; \
+    sed -i 's|-jar "$FILEBOT_HOME/jar/filebot.jar"|-classpath "/opt/projector-server/lib/*:/usr/share/filebot/jar/*" -Dorg.jetbrains.projector.server.enable=true -Dorg.jetbrains.projector.server.classToLaunch=net.filebot.Main org.jetbrains.projector.server.ProjectorLauncher|g; s|-XX:SharedArchiveFile=/usr/share/filebot/jsa/classes.jsa||g; s|-XX:+DisableAttachMechanism|-XX:+EnableDynamicAgentLoading -Djdk.attach.allowAttachSelf=true -Dnet.filebot.UserFiles.fileChooser=Swing -Dnet.filebot.glass.effect=false --add-opens=java.desktop/sun.font=ALL-UNNAMED --add-opens=java.desktop/java.awt=ALL-UNNAMED --add-opens=java.desktop/sun.java2d=ALL-UNNAMED --add-opens=java.desktop/java.awt.peer=ALL-UNNAMED --add-opens=java.desktop/sun.awt.image=ALL-UNNAMED --add-opens=java.desktop/java.awt.dnd.peer=ALL-UNNAMED --add-opens=java.desktop/java.awt.image=ALL-UNNAMED|g' /usr/bin/filebot
 
-# install custom launcher scripts
 COPY projector /
-
-# 修改FileBot启动参数
-RUN sed -i \
-    -e 's|exec "$JAVA" |exec "$JAVA" -Dorg.jetbrains.projector.server.enable=true -Dorg.jetbrains.projector.server.classToLaunch=net.filebot.Main -cp "/opt/projector-server/lib/*:$FILEBOT_HOME/jar/*" org.jetbrains.projector.server.ProjectorLauncher |' \
-    -e 's|-XX:SharedArchiveFile=/usr/share/filebot/jsa/classes.jsa||' \
-    -e 's|-XX:+DisableAttachMechanism|-XX:+EnableDynamicAgentLoading -Djdk.attach.allowAttachSelf=true|' \
-    "$FILEBOT_HOME/filebot.sh"
-
-# 配置用户和权限
-RUN groupadd -g 1000 filebot \
-    && useradd -u 1000 -g filebot -d /data filebot \
-    && mkdir -p /data \
-    && chown -R filebot:filebot /data
 
 EXPOSE 8887
 
