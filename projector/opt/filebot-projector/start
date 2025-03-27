@@ -1,0 +1,2 @@
+#!/bin/sh
+filebot "$@" | egrep -v 'IdeState|isIdeAttached|ProjectorBatchTransformer|InjectorAgent|IDE'
