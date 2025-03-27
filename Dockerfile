@@ -1,4 +1,4 @@
-# 第一阶段：构建基础环境
+# 第一阶段：最小化基础环境
 FROM alpine:3.19 AS base
 
 LABEL maintainer="Reinhard Pointner <rednoah@filebot.net>"
@@ -11,51 +11,37 @@ ENV FILEBOT_VERSION="5.1.7" \
     PUSER="filebot" \
     PGROUP="filebot"
 
-# 安装主要依赖
+# 安装核心依赖
 RUN apk add --no-cache \
     openjdk21-jre-headless \
     jna \
-    mediainfo \
-    chromaprint \
     unrar \
     p7zip \
     xz \
-    ffmpeg \
-    mkvtoolnix \
-    atomicparsley \
-    imagemagick \
-    libwebp-tools \
-    sudo \
-    gnupg \
-    curl \
-    file \
-    inotify-tools \
-    rsync \
-    jdupes \
-    bash
+    bash \
+    su-exec
 
 # 安装FileBot
 RUN set -eux; \
     curl -fsSL "https://raw.githubusercontent.com/filebot/plugins/master/gpg/maintainer.pub" | gpg --dearmor --output "/usr/share/keyrings/filebot.gpg"; \
-    echo "https://get.filebot.net/alpine/" | tee -a /etc/apk/repositories; \
+    echo "https://get.filebot.net/alpine/" >> /etc/apk/repositories; \
     apk add --no-cache filebot; \
     sed -i 's|APP_DATA=.*|APP_DATA="$HOME"|g; s|-Dapplication.deployment=deb|-Dapplication.deployment=docker -Duser.home="$HOME"|g' /usr/bin/filebot
 
 COPY generic /
 
-# 第二阶段：添加Projector支持
+# 第二阶段：精简版Projector支持
 FROM base AS projector
 
-# 安装OpenJDK 17用于Projector
+# 安装最小化Java环境
 RUN apk add --no-cache openjdk17-jre-headless
 
-# 安装Projector
+# 安装Projector核心组件
 RUN set -eux; \
-    curl -fsSL -o /tmp/projector-server.zip https://github.com/JetBrains/projector-server/releases/download/v1.8.1/projector-server-v1.8.1.zip; \
-    unzip /tmp/projector-server.zip -d /opt; \
-    mv -v /opt/projector-server-* /opt/projector-server; \
-    rm -rf /opt/projector-server/lib/slf4j-* /opt/projector-server/bin /tmp/projector-server.zip; \
-    sed -i 's|-jar "$FILEBOT_HOME/jar/filebot.jar"|-classpath "/opt/projector-server/lib/*:/usr/share/filebot/jar/*" -Dorg.jetbrains.projector.server.enable=true -Dorg.jetbrains.projector.server.classToLaunch=net.filebot.Main org.jetbrains.projector.server.ProjectorLauncher|g; s|-XX:SharedArchiveFile=/usr/share/filebot/jsa/classes.jsa||g; s|-XX:+DisableAttachMechanism|-XX:+EnableDynamicAgentLoading -Djdk.attach.allowAttachSelf=true -Dnet.filebot.UserFiles.fileChooser=Swing -Dnet.filebot.glass.effect=false --add-opens=java.desktop/sun.font=ALL-UNNAMED --add-opens=java.desktop/java.awt=ALL-UNNAMED --add-opens=java.desktop/sun.java2d=ALL-UNNAMED --add-opens=java.desktop/java.awt.peer=ALL-UNNAMED --add-opens=java.desktop/sun.awt.image=ALL-UNNAMED --add-opens=java.desktop/java.awt.dnd.peer=ALL-UNNAMED --add-opens=java.desktop/java.awt.image=ALL-UNNAMED|g' /usr/bin/filebot
+    curl -fsSL -o /tmp/projector.zip https://github.com/JetBrains/projector-server/releases/download/v1.8.1/projector-server-v1.8.1.zip; \
+    unzip /tmp/projector.zip -d /opt/projector-server; \
+    rm -rf /tmp/projector.zip /opt/projector-server/bin; \
+    sed -i 's|-jar "$FILEBOT_HOME/jar/filebot.jar"|-classpath "/opt/projector-server/*:/usr/share/filebot/jar/*" -Dorg.jetbrains.projector.server.enable=true|g' /usr/bin/filebot
 
 COPY projector /
 
