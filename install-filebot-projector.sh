@@ -6,6 +6,7 @@ echo "deb [arch=all signed-by=/usr/share/keyrings/filebot.gpg] https://get.fileb
 apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-17-jre libjna-java trash-cli unzip unrar p7zip-full p7zip-rar xz-utils sudo gnupg curl file inotify-tools rsync jdupes duperemove \
  && ln -s /usr/lib/*-linux-gnu*/jni /usr/lib/jni
+ ##  ffmpeg mkvtoolnix mediainfo libchromaprint-tools imagemagick webp libjxl-tools atomicparsley
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends filebot
 sed -i 's|APP_DATA=.*|APP_DATA="/opt/filebot"|g; s|-Dapplication.deployment=deb|-Dapplication.deployment=deb -Duser.home="/opt/filebot" |g' /usr/bin/filebot
 curl -fsSL -o /tmp/projector-server.zip https://github.com/JetBrains/projector-server/releases/download/v1.8.1/projector-server-v1.8.1.zip
