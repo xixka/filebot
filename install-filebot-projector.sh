@@ -4,7 +4,7 @@ rm /opt/projector-server -r
 curl -fsSL "https://raw.githubusercontent.com/filebot/plugins/master/gpg/maintainer.pub" | gpg --dearmor --output "/usr/share/keyrings/filebot.gpg"  
 echo "deb [arch=all signed-by=/usr/share/keyrings/filebot.gpg] https://get.filebot.net/deb/ universal main" > /etc/apt/sources.list.d/filebot.list 
 apt-get update \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-21-jre-headless libjna-java mediainfo libchromaprint-tools trash-cli unzip unrar p7zip-full p7zip-rar xz-utils ffmpeg mkvtoolnix atomicparsley imagemagick webp libjxl-tools sudo gnupg curl file inotify-tools rsync jdupes duperemove \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-17-jre libjna-java trash-cli unzip unrar p7zip-full p7zip-rar xz-utils sudo gnupg curl file inotify-tools rsync jdupes duperemove \
  && ln -s /usr/lib/*-linux-gnu*/jni /usr/lib/jni
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends filebot
 sed -i 's|APP_DATA=.*|APP_DATA="/opt/filebot"|g; s|-Dapplication.deployment=deb|-Dapplication.deployment=deb -Duser.home="/opt/filebot" |g' /usr/bin/filebot
