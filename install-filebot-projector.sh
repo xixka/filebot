@@ -1,5 +1,6 @@
 #!/bin/bash
-
+apt autoremove filebot --purge
+rm /opt/projector-server -r
 curl -fsSL "https://raw.githubusercontent.com/filebot/plugins/master/gpg/maintainer.pub" | gpg --dearmor --output "/usr/share/keyrings/filebot.gpg"  
 echo "deb [arch=all signed-by=/usr/share/keyrings/filebot.gpg] https://get.filebot.net/deb/ universal main" > /etc/apt/sources.list.d/filebot.list 
 apt-get update \
