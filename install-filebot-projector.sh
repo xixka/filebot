@@ -1,4 +1,9 @@
 #!/bin/bash
+apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-21-jre-headless libjna-java mediainfo libchromaprint-tools trash-cli unzip unrar p7zip-full p7zip-rar xz-utils ffmpeg mkvtoolnix atomicparsley imagemagick webp libjxl-tools sudo gnupg curl file inotify-tools rsync jdupes duperemove \
+ && rm -rvf /var/lib/apt/lists/* \
+ ## ** FIX libjna-java (see https://bugs.launchpad.net/ubuntu/+source/libjna-java/+bug/2000863)
+ && ln -s /usr/lib/*-linux-gnu*/jni /usr/lib/jni
 curl -fsSL "https://raw.githubusercontent.com/filebot/plugins/master/gpg/maintainer.pub" | gpg --dearmor --output "/usr/share/keyrings/filebot.gpg"  
 echo "deb [arch=all signed-by=/usr/share/keyrings/filebot.gpg] https://get.filebot.net/deb/ universal main" > /etc/apt/sources.list.d/filebot.list 
  apt-get update
