@@ -32,4 +32,3 @@ EOF
 systemctl daemon-reload
 systemctl enable filebot
 systemctl restart filebot
-systemctl status filebot
