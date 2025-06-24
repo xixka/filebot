@@ -23,7 +23,7 @@ After=network.target
 [Service]
 Type=simple
 User=filebot
-ExecStart=/usr/bin/filebot "$@" -no-xattr -no-probe
+ExecStart=/usr/bin/filebot -no-xattr -no-probe
 Restart=on-failure
 RestartSec=5
 SyslogIdentifier=filebot
