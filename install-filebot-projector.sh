@@ -18,7 +18,7 @@ After=network.target
 [Service]
 Type=simple
 User=filebot
-ExecStart=/bin/sh -c '/usr/bin/filebot "$@" -DuseExtendedFileAttributes=false | egrep -v "IdeState|isIdeAttached|ProjectorBatchTransformer|InjectorAgent|IDE"'
+ExecStart=/bin/sh -c '/usr/bin/filebot "$@" -no-xattr '
 Restart=on-failure
 RestartSec=5
 SyslogIdentifier=filebot
