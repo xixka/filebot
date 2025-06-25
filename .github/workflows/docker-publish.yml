@@ -1,0 +1,69 @@
+name: Docker image CI/CD
+
+env:
+  DOCKER_IMAGE_NAME: xixka/filebot-zh
+  PLATFORMS: linux/amd64,linux/arm64/v8
+
+on:
+  push:
+    branches: '*'
+    tags:
+      - v[0-9][0-9].[0-9][0-9].[0-9]+
+      - v[0-9][0-9].[0-9][0-9].[0-9]+-pre.[0-9]+
+  pull_request:
+
+jobs:
+  build:
+    name: Build image
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Prepare
+        id: prep
+        run: |
+          VERSION=unknown
+          if [[ $GITHUB_REF =~ refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          elif [[ $GITHUB_REF =~ refs/heads/* ]]; then
+            VERSION=${GITHUB_SHA::8}
+          elif [[ $GITHUB_REF =~ refs/pull/* ]]; then
+            VERSION=pr-${{ github.event.number }}
+          else
+            echo "::error::Unexpected GITHUB_REF: $GITHUB_REF"
+            exit 1
+          fi
+          LABEL_VERSION=${VERSION}
+          if [[ $GITHUB_REF =~ refs/tags/* ]]; then
+            LABEL_VERSION=${VERSION:1}
+          fi
+          TAGS="${{ env.DOCKER_IMAGE_NAME }}:${VERSION}"
+          if [[ $GITHUB_REF =~ refs/tags/* ]]; then
+            TAGS="$TAGS,${{ env.DOCKER_IMAGE_NAME }}:latest"
+          fi
+          TAGS="$TAGS,$(echo $TAGS | tr ',' '\n' | sed 's|^|ghcr.io/|' | tr '\n' ',')"
+          echo "is_release=${IS_RELEASE}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "label_version=${LABEL_VERSION}" >> $GITHUB_OUTPUT
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        if: ${{ steps.prep.outputs.is_release == 'yes' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: ${{ steps.prep.outputs.is_release == 'yes' }}
+          platforms: ${{ env.PLATFORMS }}
+          tags: ${{ steps.prep.outputs.tags }}
+          build-args: |
+            DOCKER_IMAGE_VERSION=${{ steps.prep.outputs.label_version }}
