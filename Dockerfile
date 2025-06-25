@@ -1,5 +1,6 @@
 FROM  --platform=$BUILDPLATFORM jlesage/filebot
 ENV LANG=zh_CN.UTF-8
+ENV FILEBOT_CUSTOM_OPTIONS="-no-xattr -no-probe "
 RUN echo "installing CJK font..." && \
     if apk search --no-cache font-wqy-zenhei | grep -q font-wqy-zenhei; then \
         apk add --no-cache font-wqy-zenhei; \
